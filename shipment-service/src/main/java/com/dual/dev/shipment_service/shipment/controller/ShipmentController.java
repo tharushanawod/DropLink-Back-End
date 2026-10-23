@@ -1,44 +1,72 @@
 package com.dual.dev.shipment_service.shipment.controller;
 
-import java.util.Map;
+import com.dual.dev.shipment_service.shipment.dto.CreateShipmentRequest;
+import com.dual.dev.shipment_service.shipment.dto.UpdateShipmentRequest;
+import com.dual.dev.shipment_service.shipment.dto.ShipmentResponse;
+import com.dual.dev.shipment_service.shipment.service.ShipmentService;
 
+import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+
 @RestController
-@RequestMapping("api/v1")
+@RequestMapping("/api/v1/shipments")
 public class ShipmentController {
-    @GetMapping("/hello")
-    public Map<String,String> hello(){
 
-        return Map.of("Tharusha","Nawod");
-    }
+    private final ShipmentService shipmentService;
 
-    // Create shipment
-    @PostMapping("/shipments")
-     public String CreateShipments(){
-        return "Shipment Created";
+    public ShipmentController(ShipmentService shipmentService) {
+        this.shipmentService = shipmentService;
     }
 
-    //Get all shipments
-    @GetMapping("/shipments")
-    public String GetShipments(){
-        return "here are the shipments";
-    }
-    // Get shipment by ID
-    @GetMapping("/shipments/{id}")
-    public String GetShipment(){
-        return "here are the shipment";
+    // 1. Create shipment
+    @PostMapping
+    public ResponseEntity<ShipmentResponse> createShipment(
+            @Valid @RequestBody CreateShipmentRequest request
+    ) {
+        ShipmentResponse response =
+                shipmentService.createShipment(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 
-    // Update shipment by ID
-    @PutMapping("/shipments/{id}")
-    public String UpdateShipment(){
-        return "here are the shipment";
+    // 2. Get shipment by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<ShipmentResponse> getShipmentById(
+            @PathVariable Long id
+    ) {
+        ShipmentResponse response =
+                shipmentService.getShipmentById(id);
+
+        return ResponseEntity.ok(response);
     }
-    // Delete shipment
-    @DeleteMapping("/shipments/{id}")
-    public String DeleteShipment(){
-        return "here are the shipment";
+
+    // 3. Get shipment by tracking number
+    @GetMapping("/tracking/{trackingNumber}")
+    public ResponseEntity<ShipmentResponse> getShipmentByTrackingNumber(
+            @PathVariable String trackingNumber
+    ) {
+        ShipmentResponse response =
+                shipmentService.getShipmentByTrackingNumber(trackingNumber);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 4. Update shipment
+    @PatchMapping("/{id}")
+    public ResponseEntity<ShipmentResponse> updateShipment(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateShipmentRequest request
+    ) {
+        ShipmentResponse response =
+                shipmentService.updateShipment(id, request);
+
+        return ResponseEntity.ok(response);
     }
 }
-
