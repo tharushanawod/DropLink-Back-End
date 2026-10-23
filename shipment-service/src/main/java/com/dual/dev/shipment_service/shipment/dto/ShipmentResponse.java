@@ -3,7 +3,7 @@ package com.dual.dev.shipment_service.shipment.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record CreateShipmentResponse(
+public record ShipmentResponse(
 
         Long id,
         String trackingNumber,
@@ -23,7 +23,6 @@ public record CreateShipmentResponse(
         BigDecimal deliveryLatitude,
         BigDecimal deliveryLongitude,
 
-        String priority,
         String currentStatus,
 
         LocalDateTime estimatedDelivery,
