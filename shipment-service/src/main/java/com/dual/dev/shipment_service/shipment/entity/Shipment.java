@@ -1,5 +1,6 @@
 package com.dual.dev.shipment_service.shipment.entity;
 
+import com.dual.dev.shipment_service.shipment.enums.ShipmentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
