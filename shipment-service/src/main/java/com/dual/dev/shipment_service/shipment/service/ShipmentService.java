@@ -4,21 +4,23 @@ import com.dual.dev.shipment_service.shipment.dto.CreateShipmentRequest;
 import com.dual.dev.shipment_service.shipment.dto.ShipmentResponse;
 import com.dual.dev.shipment_service.shipment.dto.UpdateShipmentRequest;
 import com.dual.dev.shipment_service.shipment.entity.Shipment;
+import com.dual.dev.shipment_service.shipment.entity.Package;
 import com.dual.dev.shipment_service.shipment.enums.ShipmentStatus;
 import com.dual.dev.shipment_service.shipment.repository.ShipmentRepository;
+import com.dual.dev.shipment_service.shipment.repository.PackageRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
-
-    public ShipmentService(ShipmentRepository shipmentRepository) {
-        this.shipmentRepository = shipmentRepository;
-    }
+    private final PackageRepository packageRepository;
 
     // 1. Create shipment
     @Transactional
@@ -39,7 +41,23 @@ public class ShipmentService {
                 .currentStatus(ShipmentStatus.CREATED)
                 .build();
 
-        Shipment savedShipment = shipmentRepository.saveAndFlush(shipment);
+        Shipment savedShipment = shipmentRepository.save(shipment);
+
+        List<Package> packages = request.packages().stream()
+                .map(pkg -> Package.builder()
+                        .shipment(savedShipment)
+                        .weightKg(pkg.weightKg())
+                        .lengthCm(pkg.lengthCm())
+                        .widthCm(pkg.widthCm())
+                        .heightCm(pkg.heightCm())
+                        .packageType(pkg.packageType())
+                        .declaredValue(pkg.declaredValue())
+                        .description(pkg.description())
+                        .build())
+                .toList();
+
+        // 4. Save all Packages
+        List<Package> savedpackages = packageRepository.saveAll(packages);
 
         return toResponse(savedShipment);
     }
