@@ -1,9 +1,6 @@
 package com.dual.dev.shipment_service.shipment.service;
 
-import com.dual.dev.shipment_service.shipment.dto.CreateShipmentRequest;
-import com.dual.dev.shipment_service.shipment.dto.PackageResponse;
-import com.dual.dev.shipment_service.shipment.dto.ShipmentResponse;
-import com.dual.dev.shipment_service.shipment.dto.UpdateShipmentRequest;
+import com.dual.dev.shipment_service.shipment.dto.*;
 import com.dual.dev.shipment_service.shipment.entity.Shipment;
 import com.dual.dev.shipment_service.shipment.entity.Package;
 import com.dual.dev.shipment_service.shipment.enums.ShipmentStatus;
@@ -95,12 +92,15 @@ public class ShipmentService {
     // 4. Update shipment
     @Transactional
     public ShipmentResponse updateShipment(
-            Long id,
+            UUID id,
             UpdateShipmentRequest request
     ) {
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Shipment not found"));
+        // 2. Find packages belonging to the shipment
+        List<Package> packages =
+                packageRepository.findByShipmentId(shipment.getId());
 
         if (shipment.getCurrentStatus() != ShipmentStatus.CREATED) {
             throw new IllegalStateException(
@@ -138,7 +138,49 @@ public class ShipmentService {
         if (request.deliveryLongitude() != null)
             shipment.setDeliveryLongitude(request.deliveryLongitude());
 
-        return toResponse(shipmentRepository.save(shipment));
+        // Update packages if provided
+        if (request.packages() != null) {
+
+            for (UpdatePackageRequest pkgRequest : request.packages()) {
+
+                // Find the package within this shipment
+                Package pkg = packages.stream()
+                        .filter(p -> p.getId().equals(pkgRequest.id()))
+                        .findFirst()
+                        .orElseThrow(() ->
+                                new IllegalArgumentException(
+                                        "Package not found in this shipment"
+                                ));
+
+                // Update only provided fields
+                if (pkgRequest.weightKg() != null)
+                    pkg.setWeightKg(pkgRequest.weightKg());
+
+                if (pkgRequest.lengthCm() != null)
+                    pkg.setLengthCm(pkgRequest.lengthCm());
+
+                if (pkgRequest.widthCm() != null)
+                    pkg.setWidthCm(pkgRequest.widthCm());
+
+                if (pkgRequest.heightCm() != null)
+                    pkg.setHeightCm(pkgRequest.heightCm());
+
+                if (pkgRequest.packageType() != null)
+                    pkg.setPackageType(pkgRequest.packageType());
+
+                if (pkgRequest.declaredValue() != null)
+                    pkg.setDeclaredValue(pkgRequest.declaredValue());
+
+                if (pkgRequest.description() != null)
+                    pkg.setDescription(pkgRequest.description());
+            }
+        }
+
+// Save changes
+        shipmentRepository.save(shipment);
+        packageRepository.saveAll(packages);
+
+        return toResponse(shipment, packages);
     }
 
     // 5. Generate tracking number

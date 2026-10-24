@@ -1,8 +1,10 @@
 package com.dual.dev.shipment_service.shipment.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record  UpdateShipmentRequest (
     @Size(max = 100)
@@ -41,7 +43,10 @@ public record  UpdateShipmentRequest (
 
     @DecimalMin("-180.0")
     @DecimalMax("180.0")
-    BigDecimal deliveryLongitude
+    BigDecimal deliveryLongitude,
+
+    @Valid
+    List<UpdatePackageRequest> packages
 ){
 
 }

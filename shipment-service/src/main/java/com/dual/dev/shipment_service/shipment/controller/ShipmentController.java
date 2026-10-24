@@ -62,7 +62,7 @@ public class ShipmentController {
     // 4. Update shipment
     @PatchMapping("/{id}")
     public ResponseEntity<ShipmentResponse> updateShipment(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateShipmentRequest request
     ) {
         ShipmentResponse response =
