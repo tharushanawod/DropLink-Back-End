@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/shipments")
@@ -39,7 +40,7 @@ public class ShipmentController {
     // 2. Get shipment by ID
     @GetMapping("/{id}")
     public ResponseEntity<ShipmentResponse> getShipmentById(
-            @PathVariable Long id
+            @PathVariable UUID id
     ) {
         ShipmentResponse response =
                 shipmentService.getShipmentById(id);

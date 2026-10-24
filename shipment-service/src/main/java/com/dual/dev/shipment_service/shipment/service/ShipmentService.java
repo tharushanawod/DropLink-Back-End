@@ -1,6 +1,7 @@
 package com.dual.dev.shipment_service.shipment.service;
 
 import com.dual.dev.shipment_service.shipment.dto.CreateShipmentRequest;
+import com.dual.dev.shipment_service.shipment.dto.PackageResponse;
 import com.dual.dev.shipment_service.shipment.dto.ShipmentResponse;
 import com.dual.dev.shipment_service.shipment.dto.UpdateShipmentRequest;
 import com.dual.dev.shipment_service.shipment.entity.Shipment;
@@ -57,20 +58,22 @@ public class ShipmentService {
                 .toList();
 
         // 4. Save all Packages
-        List<Package> savedpackages = packageRepository.saveAll(packages);
+        List<Package> savedPackages = packageRepository.saveAll(packages);
 
-        return toResponse(savedShipment);
+        return toResponse(savedShipment , savedPackages);
     }
 
     // 2. Get shipment by ID
     @Transactional(readOnly = true)
-    public ShipmentResponse getShipmentById(Long id) {
+    public ShipmentResponse getShipmentById(UUID id) {
 
         Shipment shipment = shipmentRepository.findById(id)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Shipment not found"));
 
-        return toResponse(shipment);
+        List<Package> packages = packageRepository.findByShipmentId(id);
+
+        return toResponse(shipment , packages);
     }
 
     // 3. Get shipment by tracking number
@@ -143,7 +146,20 @@ public class ShipmentService {
     }
 
     // 6. Convert entity into response DTO
-    private ShipmentResponse toResponse(Shipment shipment) {
+    private ShipmentResponse toResponse(Shipment shipment , List<Package> packages) {
+
+        List<PackageResponse> packageResponses = packages.stream()
+                .map(pkg -> new PackageResponse(
+                        pkg.getId(),
+                        pkg.getWeightKg(),
+                        pkg.getLengthCm(),
+                        pkg.getWidthCm(),
+                        pkg.getHeightCm(),
+                        pkg.getPackageType().name(),
+                        pkg.getDeclaredValue(),
+                        pkg.getDescription()
+                ))
+                .toList();
 
         return new ShipmentResponse(
                 shipment.getId(),
@@ -162,7 +178,8 @@ public class ShipmentService {
                 shipment.getEstimatedDelivery(),
                 shipment.getActualDelivery(),
                 shipment.getCreatedAt(),
-                shipment.getUpdatedAt()
+                shipment.getUpdatedAt(),
+                packageResponses
         );
     }
 }

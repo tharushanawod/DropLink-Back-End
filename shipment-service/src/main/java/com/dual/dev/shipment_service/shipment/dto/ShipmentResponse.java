@@ -2,6 +2,8 @@ package com.dual.dev.shipment_service.shipment.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import com.dual.dev.shipment_service.shipment.dto.PackageResponse;
 
 public record ShipmentResponse(
 
@@ -29,6 +31,8 @@ public record ShipmentResponse(
         LocalDateTime actualDelivery,
 
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+
+        List<PackageResponse> packages
 ) {
 }
