@@ -1,7 +1,9 @@
 package com.dual.dev.shipment_service.shipment.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+import java.util.List;
 
 public record CreateShipmentRequest(
 
@@ -51,5 +53,9 @@ public record CreateShipmentRequest(
         @NotNull
         @DecimalMin("-180.0")
         @DecimalMax("180.0")
-        BigDecimal deliveryLongitude
+        BigDecimal deliveryLongitude,
+
+        @NotEmpty(message = "At least one package is required")
+        @Valid
+        List<CreatePackageRequest> packages
 ) {}
