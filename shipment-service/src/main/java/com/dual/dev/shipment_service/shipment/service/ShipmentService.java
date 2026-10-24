@@ -84,7 +84,12 @@ public class ShipmentService {
                 .orElseThrow(() ->
                         new IllegalArgumentException("Shipment not found"));
 
-        return toResponse(shipment);
+        // 2. Find packages belonging to the shipment
+        List<Package> packages =
+                packageRepository.findByShipmentId(shipment.getId());
+
+        // 3. Return shipment with packages
+        return toResponse(shipment, packages);
     }
 
     // 4. Update shipment
@@ -133,7 +138,7 @@ public class ShipmentService {
         if (request.deliveryLongitude() != null)
             shipment.setDeliveryLongitude(request.deliveryLongitude());
 
-        return toResponse(shipmentRepository.saveAndFlush(shipment));
+        return toResponse(shipmentRepository.save(shipment));
     }
 
     // 5. Generate tracking number

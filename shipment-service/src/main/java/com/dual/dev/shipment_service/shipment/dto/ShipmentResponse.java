@@ -3,11 +3,10 @@ package com.dual.dev.shipment_service.shipment.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.dual.dev.shipment_service.shipment.dto.PackageResponse;
 
 public record ShipmentResponse(
 
-        Long id,
+        java.util.UUID id,
         String trackingNumber,
 
         String senderName,
