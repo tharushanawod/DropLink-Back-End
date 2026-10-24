@@ -18,7 +18,7 @@ import java.util.UUID;
 public class Shipment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "tracking_number", nullable = false, unique = true, updatable = false, length = 50)
