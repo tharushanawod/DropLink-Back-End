@@ -1,5 +1,8 @@
 package com.dual.dev.dispatch_service.dispatch.entity;
 
+import com.dual.dev.dispatch_service.dispatch.enums.DispatchCreationMode;
+import com.dual.dev.dispatch_service.dispatch.enums.DispatchStatus;
+import com.dual.dev.dispatch_service.dispatch.enums.DispatchType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;

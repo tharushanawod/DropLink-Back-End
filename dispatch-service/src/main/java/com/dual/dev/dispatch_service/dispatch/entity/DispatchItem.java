@@ -1,5 +1,6 @@
 package com.dual.dev.dispatch_service.dispatch.entity;
 
+import com.dual.dev.dispatch_service.dispatch.enums.DispatchItemStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
