@@ -5,6 +5,7 @@ import com.dual.dev.dispatch_service.dispatch.enums.DispatchStatus;
 import com.dual.dev.dispatch_service.dispatch.enums.DispatchType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record DispatchResponse(
