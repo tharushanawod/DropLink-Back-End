@@ -1,4 +1,5 @@
 services:
+  # SHIPMENT DATABASE
   shipment-db:
     image: postgres:17
     container_name: droplink-shipment-db
@@ -21,5 +22,29 @@ services:
       timeout: 5s
       retries: 5
 
+  # DISPATCH DATABASE
+  dispatch-db:
+    image: postgres:17
+    container_name: droplink-dispatch-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: droplink_dispatch_db
+      POSTGRES_USER: dispatch_user
+      POSTGRES_PASSWORD: ${DISPATCH_DB_PASSWORD:?Set DISPATCH_DB_PASSWORD in .env}
+
+    ports:
+      - "127.0.0.1:5434:5432"
+
+    volumes:
+      - dispatch_db_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispatch_user -d droplink_dispatch_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   shipment_db_data:
+  dispatch_db_data:
