@@ -55,7 +55,7 @@ public record CreateShipmentRequest(
         @DecimalMin("-180.0")
         @DecimalMax("180.0")
         BigDecimal deliveryLongitude,
-        
+
         @NotNull
         UUID deliveryBranchId,
 
