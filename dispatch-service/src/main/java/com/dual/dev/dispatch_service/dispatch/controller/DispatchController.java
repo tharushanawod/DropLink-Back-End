@@ -196,4 +196,15 @@ public class DispatchController {
                 dispatchService.cancelDispatch(id)
         );
     }
+
+    // 16. Get packages eligible for a new dispatch
+    @GetMapping("/eligible-packages")
+    public ResponseEntity<List<EligiblePackageResponse>> getEligiblePackages(
+            @RequestParam UUID branchId,
+            @RequestParam DispatchType type) {
+
+        return ResponseEntity.ok(
+                dispatchService.getEligiblePackages(branchId, type)
+        );
+    }
 }
