@@ -23,6 +23,7 @@ import jakarta.persistence.criteria.Predicate;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -366,6 +367,49 @@ public class DispatchService {
         dispatch.setStatus(DispatchStatus.CANCELLED);
 
         return toResponse(dispatchRepository.save(dispatch));
+    }
+
+    // 16. GET ELIGIBLE PACKAGES
+    @Transactional(readOnly = true)
+    public List<EligiblePackageResponse> getEligiblePackages(
+            UUID branchId,
+            DispatchType type) {
+
+        // 1. Get packages filtered by Shipment Service
+        List<EligiblePackageResponse> packages =
+                shipmentClient.getEligiblePackages(branchId, type);
+
+        if (packages.isEmpty()) {
+            return List.of();
+        }
+
+        // 2. Extract package IDs
+        List<UUID> packageIds = packages.stream()
+                .map(EligiblePackageResponse::packageId)
+                .toList();
+
+        // 3. Find packages assigned to active dispatches
+        Set<UUID> assignedIds = dispatchItemRepository
+                .findByPackageIdInAndDispatch_StatusInAndStatusIn(
+                        packageIds,
+                        List.of(
+                                DispatchStatus.DRAFT,
+                                DispatchStatus.READY,
+                                DispatchStatus.IN_TRANSIT
+                        ),
+                        List.of(
+                                DispatchItemStatus.ASSIGNED,
+                                DispatchItemStatus.LOADED
+                        )
+                )
+                .stream()
+                .map(DispatchItem::getPackageId)
+                .collect(Collectors.toSet());
+
+        // 4. Return only unassigned packages
+        return packages.stream()
+                .filter(pkg -> !assignedIds.contains(pkg.packageId()))
+                .toList();
     }
 
     // ---------------- HELPERS ----------------
