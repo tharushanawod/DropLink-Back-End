@@ -36,6 +36,7 @@ public class ShipmentService {
                 .pickupLongitude(request.pickupLongitude())
                 .deliveryLatitude(request.deliveryLatitude())
                 .deliveryLongitude(request.deliveryLongitude())
+                .deliveryBranchId(request.deliveryBranchId())
                 .currentStatus(ShipmentStatus.CREATED)
                 .build();
 

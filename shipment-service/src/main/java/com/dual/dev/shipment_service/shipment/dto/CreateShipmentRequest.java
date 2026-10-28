@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 public record CreateShipmentRequest(
 
@@ -54,6 +55,9 @@ public record CreateShipmentRequest(
         @DecimalMin("-180.0")
         @DecimalMax("180.0")
         BigDecimal deliveryLongitude,
+        
+        @NotNull
+        UUID deliveryBranchId,
 
         @NotEmpty(message = "At least one package is required")
         @Valid

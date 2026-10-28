@@ -54,6 +54,8 @@ public class Shipment {
     @Column(name = "delivery_longitude", precision = 10, scale = 7)
     private BigDecimal deliveryLongitude;
 
+    @Column(name = "delivery_branch_id")
+    private UUID deliveryBranchId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "current_status", nullable = false, length = 30)
