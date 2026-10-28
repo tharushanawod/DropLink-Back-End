@@ -1,10 +1,12 @@
 
 package com.dual.dev.shipment_service.shipment.dto;
 
+import com.dual.dev.shipment_service.shipment.enums.PackageStatus;
 import com.dual.dev.shipment_service.shipment.enums.PackageType;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record UpdatePackageRequest(
@@ -29,6 +31,12 @@ public record UpdatePackageRequest(
         BigDecimal declaredValue,
 
         @Size(max = 500)
-        String description
+        String description,
+
+        UUID currentBranchId,
+
+        PackageStatus currentStatus,
+
+        LocalDateTime deliveredAt
 
 ) {}

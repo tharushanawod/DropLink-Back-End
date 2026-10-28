@@ -25,7 +25,7 @@ public class ShipmentService {
     public ShipmentResponse createShipment(CreateShipmentRequest request) {
 
         Shipment shipment = Shipment.builder()
-                .trackingNumber(generateTrackingNumber())
+                .trackingNumber(generateTrackingNumber("DL-SHP-"))
                 .senderName(request.senderName())
                 .senderPhone(request.senderPhone())
                 .receiverName(request.receiverName())
@@ -51,6 +51,10 @@ public class ShipmentService {
                         .packageType(pkg.packageType())
                         .declaredValue(pkg.declaredValue())
                         .description(pkg.description())
+                        .trackingNumber(generateTrackingNumber("DL-PKG-"))
+                        .currentBranchId(pkg.currentBranchId())
+                        .currentStatus(pkg.currentStatus())
+                        .deliveredAt(pkg.deliveredAt())
                         .build())
                 .toList();
 
@@ -173,6 +177,15 @@ public class ShipmentService {
 
                 if (pkgRequest.description() != null)
                     pkg.setDescription(pkgRequest.description());
+
+                if (pkgRequest.currentBranchId() != null)
+                    pkg.setCurrentBranchId(pkgRequest.currentBranchId());
+
+                if (pkgRequest.currentStatus() != null)
+                    pkg.setCurrentStatus(pkgRequest.currentStatus());
+
+                if (pkgRequest.deliveredAt() != null)
+                    pkg.setDeliveredAt(pkgRequest.deliveredAt());
             }
         }
 
@@ -184,8 +197,8 @@ public class ShipmentService {
     }
 
     // 5. Generate tracking number
-    private String generateTrackingNumber() {
-        return "DL-" + UUID.randomUUID()
+    private String generateTrackingNumber(String prefix) {
+        return prefix + UUID.randomUUID()
                 .toString()
                 .replace("-", "")
                 .substring(0, 12)
@@ -204,7 +217,11 @@ public class ShipmentService {
                         pkg.getHeightCm(),
                         pkg.getPackageType().name(),
                         pkg.getDeclaredValue(),
-                        pkg.getDescription()
+                        pkg.getDescription(),
+                        pkg.getTrackingNumber(),
+                        pkg.getCurrentBranchId(),
+                        pkg.getCurrentStatus() != null ? pkg.getCurrentStatus().name() : null,
+                        pkg.getDeliveredAt()
                 ))
                 .toList();
 
