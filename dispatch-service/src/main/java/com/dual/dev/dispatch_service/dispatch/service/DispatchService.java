@@ -1,6 +1,7 @@
 
 package com.dual.dev.dispatch_service.dispatch.service;
 
+import com.dual.dev.dispatch_service.dispatch.client.ShipmentClient;
 import com.dual.dev.dispatch_service.dispatch.dto.*;
 import com.dual.dev.dispatch_service.dispatch.entity.*;
 import com.dual.dev.dispatch_service.dispatch.enums.DispatchCreationMode;
@@ -31,6 +32,7 @@ public class DispatchService {
 
     private final DispatchRepository dispatchRepository;
     private final DispatchItemRepository dispatchItemRepository;
+    private final ShipmentClient shipmentClient;
 
     // 1. CREATE DISPATCH
     @Transactional
