@@ -37,7 +37,7 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
 
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8180:8080"
 
     depends_on:
       keycloak-db:
