@@ -45,6 +45,20 @@ services:
       timeout: 5s
       retries: 5
 
+  user-account-db:
+    image: postgres:17
+    container_name: droplink-user-account-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: droplink_user_account_db
+      POSTGRES_USER: account_user
+      POSTGRES_PASSWORD: ${USER_ACCOUNT_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - user_account_db_data:/var/lib/postgresql/data
+
 volumes:
   shipment_db_data:
   dispatch_db_data:
+  user_account_db_data:
