@@ -47,6 +47,9 @@ public class UserAccount {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
