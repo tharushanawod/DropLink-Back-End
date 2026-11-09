@@ -6,9 +6,12 @@ import com.dual.dev.account_service.account.service.AccountService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
@@ -57,5 +60,13 @@ public class AccountController {
                 keycloakUserId,
                 email
         );
+    }
+
+    // Fetch all accounts - admin only
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<AccountResponse> getAllAccounts() {
+
+        return accountService.getAllAccounts();
     }
 }
