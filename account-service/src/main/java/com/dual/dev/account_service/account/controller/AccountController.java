@@ -1,6 +1,7 @@
 package com.dual.dev.account_service.account.controller;
 
 import com.dual.dev.account_service.account.dto.request.UpdateAccountRequest;
+import com.dual.dev.account_service.account.dto.request.UpdateAccountStatusRequest;
 import com.dual.dev.account_service.account.dto.response.AccountResponse;
 import com.dual.dev.account_service.account.service.AccountService;
 
@@ -15,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
@@ -87,6 +90,18 @@ public class AccountController {
                 accountPage.getTotalPages(),
                 accountPage.isFirst(),
                 accountPage.isLast()
+        );
+    }
+
+    @PatchMapping("/{accountId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AccountResponse updateAccountStatus(
+            @PathVariable UUID accountId,
+            @Valid @RequestBody UpdateAccountStatusRequest request) {
+
+        return accountService.updateAccountStatus(
+                accountId,
+                request.active()
         );
     }
 }

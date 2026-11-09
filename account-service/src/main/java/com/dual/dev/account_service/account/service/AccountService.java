@@ -13,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @Transactional
 public class AccountService {
@@ -103,6 +105,29 @@ public class AccountService {
 
         return accountRepository.findAll(pageable)
                 .map(this::toResponse);
+    }
+
+    // Update an account's active status
+    public AccountResponse updateAccountStatus(
+            UUID accountId,
+            boolean active) {
+
+        // 1. Find the account using its ID
+        Account account = accountRepository
+                .findById(accountId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Account not found with ID: " + accountId
+                        ));
+
+        // 2. Update its active status
+        account.setActive(active);
+
+        // 3. Save the updated account
+        Account updatedAccount = accountRepository.save(account);
+
+        // 4. Return the updated account
+        return toResponse(updatedAccount);
     }
 
     // Convert Account entity into AccountResponse DTO
