@@ -1,7 +1,7 @@
 package com.dual.dev.account_service.account.controller;
 
-import com.dual.dev.account_service.account.dto.UpdateAccountRequest;
-import com.dual.dev.account_service.account.dto.AccountResponse;
+import com.dual.dev.account_service.account.dto.request.UpdateAccountRequest;
+import com.dual.dev.account_service.account.dto.response.AccountResponse;
 import com.dual.dev.account_service.account.service.AccountService;
 
 import com.dual.dev.account_service.common.dto.PageResponse;
@@ -15,8 +15,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/accounts")

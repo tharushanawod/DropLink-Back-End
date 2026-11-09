@@ -1,7 +1,7 @@
 package com.dual.dev.account_service.account.service;
 
-import com.dual.dev.account_service.account.dto.UpdateAccountRequest;
-import com.dual.dev.account_service.account.dto.AccountResponse;
+import com.dual.dev.account_service.account.dto.request.UpdateAccountRequest;
+import com.dual.dev.account_service.account.dto.response.AccountResponse;
 import com.dual.dev.account_service.account.entity.Account;
 import com.dual.dev.account_service.account.repository.AccountRepository;
 

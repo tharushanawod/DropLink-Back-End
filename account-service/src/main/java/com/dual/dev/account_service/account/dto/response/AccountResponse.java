@@ -1,5 +1,5 @@
 
-package com.dual.dev.account_service.account.dto;
+package com.dual.dev.account_service.account.dto.response;
 
 import java.time.Instant;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.dual.dev.account_service.account.dto;
+package com.dual.dev.account_service.account.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
