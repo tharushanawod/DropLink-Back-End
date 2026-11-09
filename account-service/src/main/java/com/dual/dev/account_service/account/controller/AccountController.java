@@ -43,4 +43,19 @@ public class AccountController {
                 request
         );
     }
+
+    // Create an account for the logged-in user
+    @PostMapping("/provision")
+    public AccountResponse provisionMyAccount(
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String keycloakUserId = jwt.getSubject();
+
+        String email = jwt.getClaimAsString("email");
+
+        return accountService.provisionMyAccount(
+                keycloakUserId,
+                email
+        );
+    }
 }
