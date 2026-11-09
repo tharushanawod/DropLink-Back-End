@@ -11,6 +11,8 @@ import com.dual.dev.account_service.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Transactional
 public class AccountService {
@@ -93,6 +95,16 @@ public class AccountService {
         Account updatedAccount = accountRepository.save(account);
 
         return toResponse(updatedAccount);
+    }
+
+    // Get all accounts
+    @Transactional(readOnly = true)
+    public List<AccountResponse> getAllAccounts() {
+
+        return accountRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     // Convert Account entity into AccountResponse DTO
