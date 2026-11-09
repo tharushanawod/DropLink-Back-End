@@ -6,6 +6,10 @@ import com.dual.dev.account_service.account.service.AccountService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -65,8 +69,15 @@ public class AccountController {
     // Fetch all accounts - admin only
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<AccountResponse> getAllAccounts() {
+    public Page<AccountResponse> getAllAccounts(
 
-        return accountService.getAllAccounts();
+            @PageableDefault(
+                    size = 20,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable) {
+
+        return accountService.getAllAccounts(pageable);
     }
 }

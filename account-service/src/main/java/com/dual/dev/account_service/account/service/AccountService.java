@@ -8,10 +8,10 @@ import com.dual.dev.account_service.account.repository.AccountRepository;
 import com.dual.dev.account_service.common.exception.BadRequestException;
 import com.dual.dev.account_service.common.exception.ConflictException;
 import com.dual.dev.account_service.common.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Transactional
@@ -99,12 +99,10 @@ public class AccountService {
 
     // Get all accounts
     @Transactional(readOnly = true)
-    public List<AccountResponse> getAllAccounts() {
+    public Page<AccountResponse> getAllAccounts(Pageable pageable) {
 
-        return accountRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        return accountRepository.findAll(pageable)
+                .map(this::toResponse);
     }
 
     // Convert Account entity into AccountResponse DTO
