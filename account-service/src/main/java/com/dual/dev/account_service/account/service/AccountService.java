@@ -5,6 +5,9 @@ import com.dual.dev.account_service.account.dto.AccountResponse;
 import com.dual.dev.account_service.account.entity.Account;
 import com.dual.dev.account_service.account.repository.AccountRepository;
 
+import com.dual.dev.account_service.common.exception.BadRequestException;
+import com.dual.dev.account_service.common.exception.ConflictException;
+import com.dual.dev.account_service.common.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,13 +38,13 @@ public class AccountService {
 
         // 3. Check whether email is available
         if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException(
-                    "Email claim is missing from the JWT token"
+            throw new BadRequestException(
+                    "Email claim is missing from the access token"
             );
         }
 
         if (accountRepository.existsByEmail(email)) {
-            throw new IllegalStateException(
+            throw new ConflictException(
                     "An account with this email already exists"
             );
         }
@@ -69,8 +72,7 @@ public class AccountService {
         Account account = accountRepository
                 .findByKeycloakUserId(keycloakUserId)
                 .orElseThrow(() ->
-                        new RuntimeException("Account not found"));
-
+                        new ResourceNotFoundException("Account not found"));
         return toResponse(account);
     }
 
@@ -82,7 +84,7 @@ public class AccountService {
         Account account = accountRepository
                 .findByKeycloakUserId(keycloakUserId)
                 .orElseThrow(() ->
-                        new RuntimeException("Account not found"));
+                        new ResourceNotFoundException("Account not found"));
 
         account.setFirstName(request.firstName());
         account.setLastName(request.lastName());
