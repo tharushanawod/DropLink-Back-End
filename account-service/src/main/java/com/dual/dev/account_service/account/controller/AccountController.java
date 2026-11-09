@@ -4,6 +4,7 @@ import com.dual.dev.account_service.account.dto.UpdateAccountRequest;
 import com.dual.dev.account_service.account.dto.AccountResponse;
 import com.dual.dev.account_service.account.service.AccountService;
 
+import com.dual.dev.account_service.common.dto.PageResponse;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
@@ -69,8 +70,7 @@ public class AccountController {
     // Fetch all accounts - admin only
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public Page<AccountResponse> getAllAccounts(
-
+    public PageResponse<AccountResponse> getAllAccounts(
             @PageableDefault(
                     size = 20,
                     sort = "createdAt",
@@ -78,6 +78,17 @@ public class AccountController {
             )
             Pageable pageable) {
 
-        return accountService.getAllAccounts(pageable);
+        Page<AccountResponse> accountPage =
+                accountService.getAllAccounts(pageable);
+
+        return new PageResponse<>(
+                accountPage.getContent(),
+                accountPage.getNumber(),
+                accountPage.getSize(),
+                accountPage.getTotalElements(),
+                accountPage.getTotalPages(),
+                accountPage.isFirst(),
+                accountPage.isLast()
+        );
     }
 }
