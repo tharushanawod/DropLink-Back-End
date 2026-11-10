@@ -4,9 +4,7 @@ import com.dual.dev.account_service.account.entity.Account;
 
 import jakarta.persistence.*;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,7 +22,9 @@ import java.util.UUID;
 )
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class SavedAddress {
 
     @Id

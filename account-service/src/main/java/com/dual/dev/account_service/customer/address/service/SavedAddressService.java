@@ -13,6 +13,7 @@ import com.dual.dev.account_service.customer.address.dto.response.SavedAddressRe
 import com.dual.dev.account_service.customer.address.entity.SavedAddress;
 import com.dual.dev.account_service.customer.address.repository.SavedAddressRepository;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,19 +22,11 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class SavedAddressService {
 
     private final SavedAddressRepository savedAddressRepository;
     private final AccountRepository accountRepository;
-
-    public SavedAddressService(
-            SavedAddressRepository savedAddressRepository,
-            AccountRepository accountRepository) {
-
-        this.savedAddressRepository = savedAddressRepository;
-        this.accountRepository = accountRepository;
-    }
-
 
     // Create a saved address for the authenticated customer
     public SavedAddressResponse createAddress(
@@ -47,31 +40,24 @@ public class SavedAddressService {
                 request.longitude()
         );
 
-        // Create a SavedAddress object
-        SavedAddress address = new SavedAddress();
-
-        address.setAccount(account);
-
-        address.setLabel(request.label());
-        address.setRecipientName(request.recipientName());
-        address.setRecipientPhone(request.recipientPhone());
-
-        address.setAddressLine1(request.addressLine1());
-        address.setAddressLine2(request.addressLine2());
-
-        address.setCity(request.city());
-        address.setDistrict(request.district());
-        address.setPostalCode(request.postalCode());
-        address.setCountry(request.country());
-
-        address.setLatitude(request.latitude());
-        address.setLongitude(request.longitude());
-
-        // Automatically make the first saved address the default
         boolean firstAddress =
                 !savedAddressRepository.existsByAccount_Id(account.getId());
 
-        address.setDefaultAddress(firstAddress);
+        SavedAddress address = SavedAddress.builder()
+                .account(account)
+                .label(request.label())
+                .recipientName(request.recipientName())
+                .recipientPhone(request.recipientPhone())
+                .addressLine1(request.addressLine1())
+                .addressLine2(request.addressLine2())
+                .city(request.city())
+                .district(request.district())
+                .postalCode(request.postalCode())
+                .country(request.country())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .defaultAddress(firstAddress)
+                .build();
 
         SavedAddress savedAddress =
                 savedAddressRepository.save(address);
