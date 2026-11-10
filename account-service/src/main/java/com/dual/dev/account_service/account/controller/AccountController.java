@@ -31,6 +31,9 @@ public class AccountController {
 
     // Get the logged-in user's account
     @GetMapping("/me")
+    @PreAuthorize(
+            "@accountStatusChecker.isActive(authentication)"
+    )
     public AccountResponse getMyAccount(
             @AuthenticationPrincipal Jwt jwt) {
 
@@ -41,6 +44,9 @@ public class AccountController {
 
     // Update the logged-in user's account
     @PutMapping("/me")
+    @PreAuthorize(
+            "@accountStatusChecker.isActive(authentication)"
+    )
     public AccountResponse updateMyAccount(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateAccountRequest request) {
@@ -55,6 +61,9 @@ public class AccountController {
 
     // Create an account for the logged-in user
     @PostMapping("/provision")
+    @PreAuthorize(
+            "@accountStatusChecker.isActiveOrNotProvisioned(authentication)"
+    )
     public AccountResponse provisionMyAccount(
             @AuthenticationPrincipal Jwt jwt) {
 
@@ -70,7 +79,9 @@ public class AccountController {
 
     // Fetch all accounts - admin only
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(
+            "hasRole('ADMIN') and @accountStatusChecker.isActive(authentication)"
+    )
     public PageResponse<AccountResponse> getAllAccounts(
             @PageableDefault(
                     size = 20,
@@ -94,7 +105,9 @@ public class AccountController {
     }
 
     @PatchMapping("/{accountId}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(
+            "hasRole('ADMIN') and @accountStatusChecker.isActive(authentication)"
+    )
     public AccountResponse updateAccountStatus(
             @PathVariable UUID accountId,
             @Valid @RequestBody UpdateAccountStatusRequest request) {
