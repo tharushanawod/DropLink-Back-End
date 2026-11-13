@@ -41,6 +41,16 @@ public class SecurityConfig {
 
                 // Configure endpoint access
                 .authorizeHttpRequests(auth -> auth
+
+                        // Allow Swagger documentation without authentication
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+
+                        // All other endpoints still require authentication
                         .anyRequest().authenticated()
                 )
 
