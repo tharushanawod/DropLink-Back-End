@@ -1,7 +1,5 @@
 package com.dual.dev.account_service.driver.profile.dto.response;
 
-import com.dual.dev.account_service.driver.profile.enums.DriverVerificationStatus;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -9,16 +7,6 @@ import java.util.UUID;
 public record DriverResponse(
 
         UUID id,
-
-        UUID accountId,
-
-        String email,
-
-        String firstName,
-
-        String lastName,
-
-        String phoneNumber,
 
         String licenseNumber,
 
@@ -28,15 +16,7 @@ public record DriverResponse(
 
         LocalDate licenseExpiryDate,
 
-        DriverVerificationStatus verificationStatus,
-
-        String rejectionReason,
-
-        Instant submittedAt,
-
-        Instant reviewedAt,
-
-        UUID reviewedByAccountId,
+        DriverVerificationResponse latestVerification,
 
         Instant createdAt,
 

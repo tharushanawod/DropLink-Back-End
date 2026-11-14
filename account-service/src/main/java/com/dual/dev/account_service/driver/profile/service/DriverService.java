@@ -1,3 +1,4 @@
+
 package com.dual.dev.account_service.driver.profile.service;
 
 import com.dual.dev.account_service.account.entity.Account;
@@ -10,28 +11,39 @@ import com.dual.dev.account_service.common.exception.ResourceNotFoundException;
 import com.dual.dev.account_service.driver.profile.dto.request.DriverProfileRequest;
 import com.dual.dev.account_service.driver.profile.dto.response.DriverLicenseDocumentResponse;
 import com.dual.dev.account_service.driver.profile.dto.response.DriverResponse;
+import com.dual.dev.account_service.driver.profile.dto.response.DriverVerificationResponse;
 
 import com.dual.dev.account_service.driver.profile.entity.Driver;
+import com.dual.dev.account_service.driver.profile.entity.DriverVerification;
+
 import com.dual.dev.account_service.driver.profile.enums.DriverVerificationStatus;
+
 import com.dual.dev.account_service.driver.profile.repository.DriverRepository;
+import com.dual.dev.account_service.driver.profile.repository.DriverVerificationRepository;
 
 import com.dual.dev.account_service.storage.DriverLicenseStorageService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import org.springframework.security.access.AccessDeniedException;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
+
 import java.util.Locale;
 import java.util.UUID;
+
 
 @Service
 @Transactional
@@ -39,27 +51,31 @@ import java.util.UUID;
 public class DriverService {
 
     private final DriverRepository driverRepository;
+
     private final AccountRepository accountRepository;
+
     private final DriverLicenseStorageService driverLicenseStorageService;
 
+    private final DriverVerificationRepository driverVerificationRepository;
 
 
     // =========================================================
-    // DRIVER OPERATIONS
+    // DRIVER APPLICATION OPERATIONS
     // =========================================================
 
-    // Create a driver profile for the authenticated user
+
+    // Create a driver profile for the authenticated customer
     public DriverResponse createMyDriverProfile(
             String keycloakUserId,
             DriverProfileRequest request) {
 
         Account account = getActiveAccount(keycloakUserId);
 
-        // An Account can have only one Driver profile
+        // An Account can have only one Driver profile.
         if (driverRepository.existsByAccount_Id(account.getId())) {
 
             throw new ConflictException(
-                    "A driver profile already exists for this account"
+                    "A driver profile already exists for this account."
             );
         }
 
@@ -71,9 +87,14 @@ public class DriverService {
                 request.licenseIssuingCountry()
         );
 
-        // Check licence uniqueness
-        ensureLicenseAvailable(licenseNumber, issuingCountry, null);
+        // Check whether the licence is already registered.
+        ensureLicenseAvailable(
+                licenseNumber,
+                issuingCountry,
+                null
+        );
 
+        // Create the Driver profile.
         Driver driver = new Driver();
 
         driver.setAccount(account);
@@ -85,13 +106,18 @@ public class DriverService {
                 issuingCountry
         );
 
-        driver.setVerificationStatus(
-                DriverVerificationStatus.DRAFT
-        );
-
         Driver savedDriver = driverRepository.save(driver);
 
-        return toResponse(savedDriver);
+        // Every new Driver starts with an initial DRAFT verification.
+        DriverVerification verification = new DriverVerification();
+
+        verification.setDriver(savedDriver);
+        verification.setStatus(DriverVerificationStatus.DRAFT);
+
+        DriverVerification savedVerification =
+                driverVerificationRepository.save(verification);
+
+        return toResponse(savedDriver, savedVerification);
     }
 
 
@@ -105,11 +131,14 @@ public class DriverService {
                 .findByAccount_Id(account.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Driver profile not found"
+                                "Driver profile not found."
                         )
                 );
 
-        return toResponse(driver);
+        DriverVerification verification =
+                getLatestVerification(driver);
+
+        return toResponse(driver, verification);
     }
 
 
@@ -124,12 +153,15 @@ public class DriverService {
                 .findByAccount_Id(account.getId())
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Driver profile not found"
+                                "Driver profile not found."
                         )
                 );
 
-        // Profiles can only be edited while DRAFT or REJECTED
-        validateEditableStatus(driver);
+        // Get the current DRAFT verification.
+        // If the latest application was REJECTED, this creates
+        // a new DRAFT verification without modifying the old one.
+        DriverVerification verification =
+                getOrCreateDraftVerification(driver);
 
         String licenseNumber = normalizeLicenseNumber(
                 request.licenseNumber()
@@ -154,33 +186,36 @@ public class DriverService {
 
         Driver updatedDriver = driverRepository.save(driver);
 
-        return toResponse(updatedDriver);
+        return toResponse(updatedDriver, verification);
     }
 
 
-    // Submit a driver profile for administrator verification
-    @Transactional
+    // Submit the current DRAFT verification for administrator review
     public DriverResponse submitForVerification(String keycloakUserId) {
 
-        // 1. Find the driver's active account.
         Account account = getActiveAccount(keycloakUserId);
 
-        // 2. Find the driver's profile.
-        Driver driver = driverRepository.findByAccount_Id(account.getId())
+        Driver driver = driverRepository
+                .findByAccount_Id(account.getId())
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("Driver profile not found.")
+                        new ResourceNotFoundException(
+                                "Driver profile not found."
+                        )
                 );
 
-        // 3. Check the current verification status.
-        if (driver.getVerificationStatus() != DriverVerificationStatus.DRAFT
-                && driver.getVerificationStatus() != DriverVerificationStatus.REJECTED) {
+        // Retrieve the latest verification attempt.
+        DriverVerification verification =
+                getLatestVerification(driver);
+
+        // Only a DRAFT application can be submitted.
+        if (verification.getStatus() != DriverVerificationStatus.DRAFT) {
 
             throw new ConflictException(
-                    "Your driver profile cannot be submitted in its current status."
+                    "Your driver application cannot be submitted in its current status."
             );
         }
 
-        // 4. Make sure the required licence information exists.
+        // Validate the driver's profile information.
         if (driver.getLicenseNumber() == null
                 || driver.getLicenseNumber().isBlank()
                 || driver.getLicenseClass() == null
@@ -193,38 +228,137 @@ public class DriverService {
             );
         }
 
-        // 5. Make sure the licence document has been uploaded.
-        if (driver.getLicenseDocumentKey() == null
-                || driver.getLicenseDocumentKey().isBlank()) {
+        // Check whether a licence document has been uploaded
+        // for this particular verification attempt.
+        validateDocumentUploaded(verification);
 
-            throw new BadRequestException(
-                    "Please upload your licence document before submitting."
+        // Check licence expiry.
+        validateLicenseNotExpired(driver);
+
+        verification.setStatus(DriverVerificationStatus.PENDING);
+        verification.setSubmittedAt(Instant.now());
+
+        DriverVerification submittedVerification =
+                driverVerificationRepository.save(verification);
+
+        return toResponse(driver, submittedVerification);
+    }
+
+
+    // =========================================================
+    // DRIVER DOCUMENT OPERATIONS
+    // =========================================================
+
+
+    // Upload or replace a driving licence document
+    public DriverLicenseDocumentResponse uploadMyLicenseDocument(
+            String keycloakUserId,
+            MultipartFile file) {
+
+        Account account = getActiveAccount(keycloakUserId);
+
+        Driver driver = driverRepository
+                .findByAccount_Id(account.getId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver profile not found."
+                        )
+                );
+
+        // Get the editable verification.
+        // If the latest one is REJECTED, create a new DRAFT attempt.
+        DriverVerification verification =
+                getOrCreateDraftVerification(driver);
+
+        // Upload the new file to RustFS.
+        DriverLicenseStorageService.UploadedLicense uploaded =
+                driverLicenseStorageService.upload(
+                        driver.getId(),
+                        file
+                );
+
+        // Keep the previous object key in case the driver
+        // is replacing a document within the same DRAFT attempt.
+        String previousDocumentKey =
+                verification.getLicenseDocumentKey();
+
+        Instant uploadedAt = Instant.now();
+
+        // Update document metadata on DriverVerification.
+        verification.setLicenseDocumentKey(uploaded.objectKey());
+
+        verification.setLicenseDocumentFileName(
+                uploaded.fileName()
+        );
+
+        verification.setLicenseDocumentContentType(
+                uploaded.contentType()
+        );
+
+        verification.setLicenseDocumentSize(
+                uploaded.size()
+        );
+
+        verification.setLicenseDocumentUploadedAt(uploadedAt);
+
+        try {
+
+            driverVerificationRepository.save(verification);
+
+        } catch (RuntimeException exception) {
+
+            // If saving the new document reference fails,
+            // clean up the newly uploaded object.
+            driverLicenseStorageService.deleteQuietly(
+                    uploaded.objectKey()
             );
+
+            throw exception;
         }
 
-        // 6. Check whether the licence is expired.
-        if (driver.getLicenseExpiryDate() == null
-                || driver.getLicenseExpiryDate().isBefore(LocalDate.now())) {
+        // Coordinate RustFS cleanup with the PostgreSQL transaction.
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
 
-            throw new BadRequestException(
-                    "Your driving licence has expired or has no valid expiry date."
-            );
-        }
+                    @Override
+                    public void afterCommit() {
 
-        // 7. Change the verification status.
-        driver.setVerificationStatus(DriverVerificationStatus.PENDING);
+                        // Delete the old document only after
+                        // the new document reference is committed.
+                        if (previousDocumentKey != null
+                                && !previousDocumentKey.isBlank()
+                                && !previousDocumentKey.equals(
+                                uploaded.objectKey()
+                        )) {
 
-        // 8. Record the submission time.
-        driver.setSubmittedAt(Instant.now());
+                            driverLicenseStorageService.deleteQuietly(
+                                    previousDocumentKey
+                            );
+                        }
+                    }
 
-        // 9. Clear previous review information when resubmitting.
-        driver.setReviewedAt(null);
-        driver.setReviewedBy(null);
-        driver.setRejectionReason(null);
+                    @Override
+                    public void afterCompletion(int status) {
 
-        Driver savedDriver = driverRepository.save(driver);
+                        // If the database transaction rolls back,
+                        // delete the newly uploaded object.
+                        if (status != STATUS_COMMITTED) {
 
-        return toResponse(savedDriver);
+                            driverLicenseStorageService.deleteQuietly(
+                                    uploaded.objectKey()
+                            );
+                        }
+                    }
+                }
+        );
+
+        return new DriverLicenseDocumentResponse(
+                uploaded.fileName(),
+                uploaded.contentType(),
+                uploaded.size(),
+                uploadedAt,
+                "Licence document uploaded successfully."
+        );
     }
 
 
@@ -232,7 +366,11 @@ public class DriverService {
     // ADMINISTRATOR OPERATIONS
     // =========================================================
 
-    // Retrieve drivers, optionally filtering by verification status
+
+    // Retrieve verification applications, optionally filtered by status.
+    //
+    // Each result represents one verification attempt.
+    // Historical rejected applications are retained and can also appear.
     @Transactional(readOnly = true)
     public Page<DriverResponse> getDrivers(
             String status,
@@ -241,35 +379,44 @@ public class DriverService {
         DriverVerificationStatus verificationStatus =
                 parseVerificationStatus(status);
 
-        Page<Driver> drivers;
+        Page<DriverVerification> verifications;
 
         if (verificationStatus == null) {
 
-            drivers = driverRepository.findAll(pageable);
+            verifications = driverVerificationRepository.findAll(pageable);
 
         } else {
 
-            drivers = driverRepository.findAllByVerificationStatus(
-                    verificationStatus,
-                    pageable
-            );
+            verifications =
+                    driverVerificationRepository.findAllByStatus(
+                            verificationStatus,
+                            pageable
+                    );
         }
 
-        return drivers.map(this::toResponse);
+        return verifications.map(
+                verification -> toResponse(
+                        verification.getDriver(),
+                        verification
+                )
+        );
     }
 
 
-    // Retrieve a particular driver's profile
+    // Retrieve a particular driver's profile with its latest verification
     @Transactional(readOnly = true)
     public DriverResponse getDriver(UUID driverId) {
 
         Driver driver = getDriverEntity(driverId);
 
-        return toResponse(driver);
+        DriverVerification verification =
+                getLatestVerification(driver);
+
+        return toResponse(driver, verification);
     }
 
 
-    // Approve a pending driver profile
+    // Approve the latest pending verification
     public DriverResponse approveDriver(
             UUID driverId,
             String adminKeycloakUserId) {
@@ -282,30 +429,44 @@ public class DriverService {
 
         validateReviewer(driver, administrator);
 
-        validatePendingStatus(driver);
+        DriverVerification verification =
+                getLatestVerification(driver);
 
-        // Licence may have expired while awaiting review
+        validatePendingStatus(verification);
+
         validateLicenseNotExpired(driver);
 
-        driver.setVerificationStatus(
+        validateDocumentUploaded(verification);
+
+        verification.setStatus(
                 DriverVerificationStatus.APPROVED
         );
 
-        driver.setReviewedAt(Instant.now());
-        driver.setReviewedBy(administrator);
-        driver.setRejectionReason(null);
+        verification.setReviewedAt(Instant.now());
 
-        Driver approvedDriver = driverRepository.save(driver);
+        verification.setReviewedBy(administrator);
 
-        return toResponse(approvedDriver);
+        verification.setRejectionReason(null);
+
+        DriverVerification approvedVerification =
+                driverVerificationRepository.save(verification);
+
+        return toResponse(driver, approvedVerification);
     }
 
 
-    // Reject a pending driver profile
+    // Reject the latest pending verification
     public DriverResponse rejectDriver(
             UUID driverId,
             String adminKeycloakUserId,
             String reason) {
+
+        if (reason == null || reason.isBlank()) {
+
+            throw new BadRequestException(
+                    "A rejection reason is required."
+            );
+        }
 
         Driver driver = getDriverEntity(driverId);
 
@@ -315,26 +476,34 @@ public class DriverService {
 
         validateReviewer(driver, administrator);
 
-        validatePendingStatus(driver);
+        DriverVerification verification =
+                getLatestVerification(driver);
 
-        driver.setVerificationStatus(
+        validatePendingStatus(verification);
+
+        verification.setStatus(
                 DriverVerificationStatus.REJECTED
         );
 
-        driver.setRejectionReason(reason.trim());
+        verification.setRejectionReason(
+                reason.trim()
+        );
 
-        driver.setReviewedAt(Instant.now());
-        driver.setReviewedBy(administrator);
+        verification.setReviewedAt(Instant.now());
 
-        Driver rejectedDriver = driverRepository.save(driver);
+        verification.setReviewedBy(administrator);
 
-        return toResponse(rejectedDriver);
+        DriverVerification rejectedVerification =
+                driverVerificationRepository.save(verification);
+
+        return toResponse(driver, rejectedVerification);
     }
 
 
     // =========================================================
     // PRIVATE HELPER METHODS
     // =========================================================
+
 
     // Retrieve an active Account using its Keycloak user ID
     private Account getActiveAccount(String keycloakUserId) {
@@ -343,14 +512,14 @@ public class DriverService {
                 .findByKeycloakUserId(keycloakUserId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Account not found"
+                                "Account not found."
                         )
                 );
 
         if (!account.isActive()) {
 
             throw new AccessDeniedException(
-                    "Inactive accounts cannot perform this operation"
+                    "Inactive accounts cannot perform this operation."
             );
         }
 
@@ -365,13 +534,79 @@ public class DriverService {
                 .findById(driverId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "Driver profile not found"
+                                "Driver profile not found."
                         )
                 );
     }
 
 
-    // Apply the editable profile information
+    // Retrieve the latest verification attempt for a driver
+    private DriverVerification getLatestVerification(Driver driver) {
+
+        return driverVerificationRepository
+                .findFirstByDriver_IdOrderByCreatedAtDescIdDesc(
+                        driver.getId()
+                )
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver verification record not found."
+                        )
+                );
+    }
+
+
+    // Return an existing DRAFT verification or create a new one
+    // when the latest verification was REJECTED.
+    private DriverVerification getOrCreateDraftVerification(
+            Driver driver) {
+
+        var latestOptional = driverVerificationRepository
+                .findFirstByDriver_IdOrderByCreatedAtDescIdDesc(
+                        driver.getId()
+                );
+
+        if (latestOptional.isEmpty()) {
+
+            return createDraftVerification(driver);
+        }
+
+        DriverVerification latest = latestOptional.get();
+
+        if (latest.getStatus() == DriverVerificationStatus.DRAFT) {
+
+            return latest;
+        }
+
+        if (latest.getStatus() == DriverVerificationStatus.REJECTED) {
+
+            // Preserve the rejected verification.
+            // Start a completely new application attempt.
+
+            return createDraftVerification(driver);
+        }
+
+        throw new ConflictException(
+                "Your driver application cannot be modified in its current status."
+        );
+    }
+
+
+    // Create a new DRAFT verification attempt
+    private DriverVerification createDraftVerification(Driver driver) {
+
+        DriverVerification verification = new DriverVerification();
+
+        verification.setDriver(driver);
+
+        verification.setStatus(
+                DriverVerificationStatus.DRAFT
+        );
+
+        return driverVerificationRepository.save(verification);
+    }
+
+
+    // Apply editable profile information
     private void applyProfileInformation(
             Driver driver,
             DriverProfileRequest request,
@@ -381,7 +616,9 @@ public class DriverService {
         driver.setLicenseNumber(licenseNumber);
 
         driver.setLicenseClass(
-                request.licenseClass().trim().toUpperCase(Locale.ROOT)
+                request.licenseClass()
+                        .trim()
+                        .toUpperCase(Locale.ROOT)
         );
 
         driver.setLicenseIssuingCountry(issuingCountry);
@@ -389,22 +626,6 @@ public class DriverService {
         driver.setLicenseExpiryDate(
                 request.licenseExpiryDate()
         );
-    }
-
-
-    // Ensure that the profile can currently be edited
-    private void validateEditableStatus(Driver driver) {
-
-        DriverVerificationStatus status =
-                driver.getVerificationStatus();
-
-        if (status != DriverVerificationStatus.DRAFT
-                && status != DriverVerificationStatus.REJECTED) {
-
-            throw new ConflictException(
-                    "Driver profile cannot be edited in its current verification status"
-            );
-        }
     }
 
 
@@ -437,7 +658,7 @@ public class DriverService {
         if (exists) {
 
             throw new ConflictException(
-                    "This driving licence is already registered"
+                    "This driving licence is already registered."
             );
         }
     }
@@ -461,32 +682,48 @@ public class DriverService {
     }
 
 
+    // Ensure that a verification has an uploaded document
+    private void validateDocumentUploaded(
+            DriverVerification verification) {
+
+        if (verification.getLicenseDocumentKey() == null
+                || verification.getLicenseDocumentKey().isBlank()) {
+
+            throw new BadRequestException(
+                    "Please upload your licence document before submitting."
+            );
+        }
+    }
+
+
     // Prevent submission or approval of expired licences
     private void validateLicenseNotExpired(Driver driver) {
 
-        if (driver.getLicenseExpiryDate().isBefore(LocalDate.now())) {
+        if (driver.getLicenseExpiryDate() == null
+                || driver.getLicenseExpiryDate().isBefore(LocalDate.now())) {
 
             throw new BadRequestException(
-                    "The driving licence has expired"
+                    "The driving licence has expired or has no valid expiry date."
             );
         }
     }
 
 
-    // Ensure the profile is waiting for administrator review
-    private void validatePendingStatus(Driver driver) {
+    // Ensure the verification is waiting for administrator review
+    private void validatePendingStatus(
+            DriverVerification verification) {
 
-        if (driver.getVerificationStatus()
+        if (verification.getStatus()
                 != DriverVerificationStatus.PENDING) {
 
             throw new ConflictException(
-                    "Only PENDING driver profiles can be reviewed"
+                    "Only PENDING verification applications can be reviewed."
             );
         }
     }
 
 
-    // Prevent an administrator from approving or rejecting their own profile
+    // Prevent an administrator from reviewing their own driver profile
     private void validateReviewer(
             Driver driver,
             Account administrator) {
@@ -494,13 +731,13 @@ public class DriverService {
         if (driver.getAccount().getId().equals(administrator.getId())) {
 
             throw new AccessDeniedException(
-                    "Administrators cannot review their own driver profiles"
+                    "Administrators cannot review their own driver profiles."
             );
         }
     }
 
 
-    // Parse and validate an optional verification-status filter
+    // Parse and validate an optional verification status filter
     private DriverVerificationStatus parseVerificationStatus(
             String status) {
 
@@ -517,128 +754,39 @@ public class DriverService {
         } catch (IllegalArgumentException exception) {
 
             throw new BadRequestException(
-                    "Invalid verification status. Allowed values: DRAFT, PENDING, APPROVED, REJECTED"
+                    "Invalid verification status. Allowed values: DRAFT, PENDING, APPROVED, REJECTED."
             );
         }
     }
 
 
-    @Transactional
-    public DriverLicenseDocumentResponse uploadMyLicenseDocument(
-            String keycloakUserId,
-            MultipartFile file
-    ) {
-
-        // 1. Find the currently authenticated driver's active account.
-        Account account = getActiveAccount(keycloakUserId);
-
-        // 2. Find the driver's profile.
-        Driver driver = driverRepository.findByAccount_Id(account.getId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Driver profile not found.")
-                );
-
-        // 3. Only DRAFT and REJECTED profiles can upload or replace documents.
-        if (driver.getVerificationStatus() != DriverVerificationStatus.DRAFT
-                && driver.getVerificationStatus() != DriverVerificationStatus.REJECTED) {
-
-            throw new ConflictException(
-                    "You cannot upload a licence document in the current verification status."
-            );
-        }
-
-        // 4. Upload the new document to RustFS.
-        DriverLicenseStorageService.UploadedLicense uploaded =
-                driverLicenseStorageService.upload(driver.getId(), file);
-
-        // 5. Remember the old document key, if a document already exists.
-        String previousDocumentKey = driver.getLicenseDocumentKey();
-
-        Instant uploadedAt = Instant.now();
-
-        // 6. Update the document information in PostgreSQL.
-        driver.setLicenseDocumentKey(uploaded.objectKey());
-        driver.setLicenseDocumentFileName(uploaded.fileName());
-        driver.setLicenseDocumentContentType(uploaded.contentType());
-        driver.setLicenseDocumentSize(uploaded.size());
-        driver.setLicenseDocumentUploadedAt(uploadedAt);
-
-        try {
-
-            driverRepository.save(driver);
-
-        } catch (RuntimeException exception) {
-
-            // If saving PostgreSQL data fails, remove the newly uploaded file.
-            driverLicenseStorageService.deleteQuietly(uploaded.objectKey());
-
-            throw exception;
-        }
-
-        // 7. Coordinate file cleanup with the database transaction.
-        // Delete the old file only after the database transaction commits.
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-
-                    @Override
-                    public void afterCommit() {
-
-                        if (previousDocumentKey != null
-                                && !previousDocumentKey.isBlank()) {
-
-                            driverLicenseStorageService.deleteQuietly(
-                                    previousDocumentKey
-                            );
-                        }
-                    }
-
-                    @Override
-                    public void afterCompletion(int status) {
-
-                        // If the database transaction rolls back,
-                        // remove the newly uploaded object.
-                        if (status != STATUS_COMMITTED) {
-
-                            driverLicenseStorageService.deleteQuietly(
-                                    uploaded.objectKey()
-                            );
-                        }
-                    }
-                }
-        );
-
-        // 8. Return the upload result.
-        return new DriverLicenseDocumentResponse(
-                uploaded.fileName(),
-                uploaded.contentType(),
-                uploaded.size(),
-                uploadedAt,
-                "Licence document uploaded successfully."
-        );
-    }
+    // =========================================================
+    // RESPONSE MAPPING
+    // =========================================================
 
 
-
-    // Convert Driver entity into response DTO
+    // Convert a Driver entity and its latest verification into DriverResponse
     private DriverResponse toResponse(Driver driver) {
 
-        Account account = driver.getAccount();
+        DriverVerification verification =
+                driverVerificationRepository
+                        .findFirstByDriver_IdOrderByCreatedAtDescIdDesc(
+                                driver.getId()
+                        )
+                        .orElse(null);
 
-        Account reviewer = driver.getReviewedBy();
+        return toResponse(driver, verification);
+    }
+
+
+    // Convert Driver and a specific verification attempt into DriverResponse
+    private DriverResponse toResponse(
+            Driver driver,
+            DriverVerification verification) {
 
         return new DriverResponse(
 
                 driver.getId(),
-
-                account.getId(),
-
-                account.getEmail(),
-
-                account.getFirstName(),
-
-                account.getLastName(),
-
-                account.getPhoneNumber(),
 
                 driver.getLicenseNumber(),
 
@@ -648,19 +796,45 @@ public class DriverService {
 
                 driver.getLicenseExpiryDate(),
 
-                driver.getVerificationStatus(),
-
-                driver.getRejectionReason(),
-
-                driver.getSubmittedAt(),
-
-                driver.getReviewedAt(),
-
-                reviewer != null ? reviewer.getId() : null,
+                verification != null
+                        ? toVerificationResponse(verification)
+                        : null,
 
                 driver.getCreatedAt(),
 
                 driver.getUpdatedAt()
+        );
+    }
+
+
+    // Convert DriverVerification entity into DriverVerificationResponse
+    private DriverVerificationResponse toVerificationResponse(
+            DriverVerification verification) {
+
+        return new DriverVerificationResponse(
+
+                verification.getId(),
+
+                verification.getStatus(),
+
+                verification.getSubmittedAt(),
+
+                verification.getReviewedAt(),
+
+                verification.getRejectionReason(),
+
+                verification.getLicenseDocumentKey() != null
+                        && !verification.getLicenseDocumentKey().isBlank(),
+
+                verification.getLicenseDocumentFileName(),
+
+                verification.getLicenseDocumentContentType(),
+
+                verification.getLicenseDocumentSize(),
+
+                verification.getLicenseDocumentUploadedAt(),
+
+                verification.getCreatedAt()
         );
     }
 }

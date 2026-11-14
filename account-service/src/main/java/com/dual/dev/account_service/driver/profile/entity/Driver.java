@@ -1,16 +1,16 @@
+
 package com.dual.dev.account_service.driver.profile.entity;
 
 import com.dual.dev.account_service.account.entity.Account;
 
-import com.dual.dev.account_service.driver.profile.enums.DriverVerificationStatus;
 import jakarta.persistence.*;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -39,8 +39,6 @@ public class Driver {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-
-    // Account associated with this driver profile
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "account_id",
@@ -49,14 +47,11 @@ public class Driver {
     )
     private Account account;
 
-
     @Column(name = "license_number", nullable = false, length = 50)
     private String licenseNumber;
 
-
     @Column(name = "license_class", nullable = false, length = 50)
     private String licenseClass;
-
 
     @Column(
             name = "license_issuing_country",
@@ -65,72 +60,24 @@ public class Driver {
     )
     private String licenseIssuingCountry;
 
-
     @Column(name = "license_expiry_date", nullable = false)
     private LocalDate licenseExpiryDate;
-
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "verification_status", nullable = false, length = 20)
-    private DriverVerificationStatus verificationStatus =
-            DriverVerificationStatus.DRAFT;
-
-
-    @Column(name = "rejection_reason", length = 500)
-    private String rejectionReason;
-
-
-    @Column(name = "submitted_at")
-    private Instant submittedAt;
-
-
-    @Column(name = "reviewed_at")
-    private Instant reviewedAt;
-
-
-    // Account of the administrator who reviewed the driver
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewed_by_account_id")
-    private Account reviewedBy;
-
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @Column(name = "license_document_key", length = 500)
-    private String licenseDocumentKey;
-
-    @Column(name = "license_document_file_name", length = 255)
-    private String licenseDocumentFileName;
-
-    @Column(name = "license_document_content_type", length = 100)
-    private String licenseDocumentContentType;
-
-    @Column(name = "license_document_size")
-    private Long licenseDocumentSize;
-
-    @Column(name = "license_document_uploaded_at")
-    private Instant licenseDocumentUploadedAt;
-
-
     @PrePersist
     protected void onCreate() {
-
         Instant now = Instant.now();
-
         createdAt = now;
-
         updatedAt = now;
     }
 
-
     @PreUpdate
     protected void onUpdate() {
-
         updatedAt = Instant.now();
     }
 }
