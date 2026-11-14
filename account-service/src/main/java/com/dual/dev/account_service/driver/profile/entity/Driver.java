@@ -101,6 +101,21 @@ public class Driver {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "license_document_key", length = 500)
+    private String licenseDocumentKey;
+
+    @Column(name = "license_document_file_name", length = 255)
+    private String licenseDocumentFileName;
+
+    @Column(name = "license_document_content_type", length = 100)
+    private String licenseDocumentContentType;
+
+    @Column(name = "license_document_size")
+    private Long licenseDocumentSize;
+
+    @Column(name = "license_document_uploaded_at")
+    private Instant licenseDocumentUploadedAt;
+
 
     @PrePersist
     protected void onCreate() {
