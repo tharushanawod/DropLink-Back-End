@@ -1,11 +1,13 @@
 
 package com.dual.dev.account_service.branch.controller;
 
+import com.dual.dev.account_service.account.dto.response.AccountResponse;
 import com.dual.dev.account_service.branch.dto.request.BranchRequest;
 import com.dual.dev.account_service.branch.dto.request.BranchStatusRequest;
 import com.dual.dev.account_service.branch.dto.response.BranchResponse;
 import com.dual.dev.account_service.branch.service.BranchService;
 
+import com.dual.dev.account_service.common.dto.PageResponse;
 import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
@@ -47,11 +49,21 @@ public class BranchAdminController {
 
     // Retrieve branches
     @GetMapping
-    public Page<BranchResponse> getBranches(
+    public PageResponse<BranchResponse> getBranches(
             @RequestParam(required = false) Boolean active,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
 
-        return branchService.getBranches(active, pageable);
+        Page<BranchResponse> branchPage = branchService.getBranches(active, pageable);
+
+        return new PageResponse<>(
+                branchPage.getContent(),
+                branchPage.getNumber(),
+                branchPage.getSize(),
+                branchPage.getTotalElements(),
+                branchPage.getTotalPages(),
+                branchPage.isFirst(),
+                branchPage.isLast()
+        );
     }
 
 
