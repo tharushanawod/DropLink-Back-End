@@ -9,9 +9,9 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.UUID;
 
 @RestController
@@ -26,9 +26,14 @@ public class ShipmentController {
 
     // 1. Create shipment
     @PostMapping
+    @PreAuthorize(
+            "hasAnyRole('CUSTOMER', 'BRANCH_STAFF') and " +
+                    "@accountStatusChecker.isActive(authentication)"
+    )
     public ResponseEntity<ShipmentResponse> createShipment(
             @Valid @RequestBody CreateShipmentRequest request
     ) {
+
         ShipmentResponse response =
                 shipmentService.createShipment(request);
 
@@ -39,9 +44,14 @@ public class ShipmentController {
 
     // 2. Get shipment by ID
     @GetMapping("/{id}")
+    @PreAuthorize(
+            "hasAnyRole('CUSTOMER', 'BRANCH_STAFF', 'DRIVER', 'ADMIN') and " +
+                    "@accountStatusChecker.isActive(authentication)"
+    )
     public ResponseEntity<ShipmentResponse> getShipmentById(
             @PathVariable UUID id
     ) {
+
         ShipmentResponse response =
                 shipmentService.getShipmentById(id);
 
@@ -50,9 +60,14 @@ public class ShipmentController {
 
     // 3. Get shipment by tracking number
     @GetMapping("/tracking/{trackingNumber}")
+    @PreAuthorize(
+            "hasAnyRole('CUSTOMER', 'BRANCH_STAFF', 'DRIVER', 'ADMIN') and " +
+                    "@accountStatusChecker.isActive(authentication)"
+    )
     public ResponseEntity<ShipmentResponse> getShipmentByTrackingNumber(
             @PathVariable String trackingNumber
     ) {
+
         ShipmentResponse response =
                 shipmentService.getShipmentByTrackingNumber(trackingNumber);
 
@@ -61,10 +76,15 @@ public class ShipmentController {
 
     // 4. Update shipment
     @PatchMapping("/{id}")
+    @PreAuthorize(
+            "hasAnyRole('CUSTOMER', 'BRANCH_STAFF', 'ADMIN') and " +
+                    "@accountStatusChecker.isActive(authentication)"
+    )
     public ResponseEntity<ShipmentResponse> updateShipment(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateShipmentRequest request
     ) {
+
         ShipmentResponse response =
                 shipmentService.updateShipment(id, request);
 
