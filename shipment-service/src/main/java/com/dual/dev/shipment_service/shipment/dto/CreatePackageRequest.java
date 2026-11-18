@@ -29,12 +29,5 @@ public record CreatePackageRequest(
         BigDecimal declaredValue,
 
         @Size(max = 500)
-        String description,
-
-        UUID currentBranchId,
-
-        @NotNull
-        PackageStatus currentStatus,
-
-        LocalDateTime deliveredAt
+        String description
 ) {}

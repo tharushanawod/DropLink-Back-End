@@ -6,6 +6,7 @@ import com.dual.dev.shipment_service.messaging.outbox.service.OutboxService;
 import com.dual.dev.shipment_service.shipment.dto.*;
 import com.dual.dev.shipment_service.shipment.entity.Shipment;
 import com.dual.dev.shipment_service.shipment.entity.Package;
+import com.dual.dev.shipment_service.shipment.enums.PackageStatus;
 import com.dual.dev.shipment_service.shipment.enums.ShipmentStatus;
 import com.dual.dev.shipment_service.shipment.repository.ShipmentRepository;
 import com.dual.dev.shipment_service.shipment.repository.PackageRepository;
@@ -62,9 +63,7 @@ public class ShipmentService {
                         .declaredValue(pkg.declaredValue())
                         .description(pkg.description())
                         .trackingNumber(generateTrackingNumber("DL-PKG-"))
-                        .currentBranchId(pkg.currentBranchId())
-                        .currentStatus(pkg.currentStatus())
-                        .deliveredAt(pkg.deliveredAt())
+                        .currentStatus(PackageStatus.CREATED)
                         .build())
                 .toList();
 
