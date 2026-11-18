@@ -1,5 +1,8 @@
 package com.dual.dev.shipment_service.shipment.service;
 
+import com.dual.dev.shipment_service.messaging.event.ShipmentEventTypes;
+import com.dual.dev.shipment_service.messaging.event.factory.ShipmentEventFactory;
+import com.dual.dev.shipment_service.messaging.outbox.service.OutboxService;
 import com.dual.dev.shipment_service.shipment.dto.*;
 import com.dual.dev.shipment_service.shipment.entity.Shipment;
 import com.dual.dev.shipment_service.shipment.entity.Package;
@@ -19,11 +22,15 @@ public class ShipmentService {
 
     private final ShipmentRepository shipmentRepository;
     private final PackageRepository packageRepository;
+    private final ShipmentEventFactory shipmentEventFactory;
+    private final OutboxService outboxService;
 
     // 1. Create shipment
+
     @Transactional
     public ShipmentResponse createShipment(CreateShipmentRequest request) {
 
+        // 1. Create Shipment
         Shipment shipment = Shipment.builder()
                 .trackingNumber(generateTrackingNumber("DL-SHP-"))
                 .senderName(request.senderName())
@@ -42,6 +49,8 @@ public class ShipmentService {
 
         Shipment savedShipment = shipmentRepository.save(shipment);
 
+
+        // 2. Create Packages
         List<Package> packages = request.packages().stream()
                 .map(pkg -> Package.builder()
                         .shipment(savedShipment)
@@ -59,11 +68,39 @@ public class ShipmentService {
                         .build())
                 .toList();
 
-        // 4. Save all Packages
-        List<Package> savedPackages = packageRepository.saveAll(packages);
 
-        return toResponse(savedShipment , savedPackages);
+        // 3. Save all Packages
+        List<Package> savedPackages =
+                packageRepository.saveAll(packages);
+
+
+        // 4. Create and save SHIPMENT_CREATED event
+        outboxService.saveEvent(
+                shipmentEventFactory.createShipmentCreatedEvent(
+                        savedShipment,
+                        savedPackages.size()
+                ),
+                ShipmentEventTypes.SHIPMENT_CREATED_ROUTING_KEY
+        );
+
+
+        // 5. Create and save PACKAGE_REGISTERED events
+        for (Package savedPackage : savedPackages) {
+
+            outboxService.saveEvent(
+                    shipmentEventFactory.createPackageRegisteredEvent(
+                            savedShipment,
+                            savedPackage
+                    ),
+                    ShipmentEventTypes.PACKAGE_REGISTERED_ROUTING_KEY
+            );
+        }
+
+
+        // 6. Return response
+        return toResponse(savedShipment, savedPackages);
     }
+
 
     // 2. Get shipment by ID
     @Transactional(readOnly = true)
