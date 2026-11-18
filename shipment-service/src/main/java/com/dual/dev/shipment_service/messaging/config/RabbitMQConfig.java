@@ -15,14 +15,6 @@ public class RabbitMQConfig {
     public static final String EVENTS_EXCHANGE =
             "droplink.events";
 
-    // Temporary queue for our connection test
-    public static final String TEST_QUEUE =
-            "shipment.test.queue";
-
-    // Temporary routing key
-    public static final String TEST_ROUTING_KEY =
-            "shipment.test";
-
     @Bean
     public TopicExchange droplinkEventsExchange() {
         return new TopicExchange(
@@ -32,21 +24,5 @@ public class RabbitMQConfig {
         );
     }
 
-    @Bean
-    public Queue shipmentTestQueue() {
-        return QueueBuilder
-                .durable(TEST_QUEUE)
-                .build();
-    }
 
-    @Bean
-    public Binding shipmentTestBinding(
-            Queue shipmentTestQueue,
-            TopicExchange droplinkEventsExchange
-    ) {
-        return BindingBuilder
-                .bind(shipmentTestQueue)
-                .to(droplinkEventsExchange)
-                .with(TEST_ROUTING_KEY);
-    }
 }
